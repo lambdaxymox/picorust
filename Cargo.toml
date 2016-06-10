@@ -1,10 +1,10 @@
 [package]
-name = "picrusat"
+name = "picorust"
 version = "0.1.0"
 authors = ["Stallmanifold <stallmanifold@gmail.com>"]
 
 [lib]
-name = "picrusat"
+name = "picorust"
 path = "src/lib.rs"
 
 [dependencies]
