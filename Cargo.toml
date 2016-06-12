@@ -3,8 +3,14 @@ name = "picorust"
 version = "0.1.0"
 authors = ["Stallmanifold <stallmanifold@gmail.com>"]
 
+build   = "build.rs"
+
 [lib]
 name = "picorust"
 path = "src/lib.rs"
 
 [dependencies]
+libc = "0.2.12"
+
+[build-dependencies]
+gcc  = "^0.3.28"

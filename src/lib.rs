@@ -1,6 +1,6 @@
+extern crate libc;
+
+mod picosat;
+
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-    }
-}
+mod picosat_tests;
