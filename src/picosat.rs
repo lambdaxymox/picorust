@@ -16,6 +16,7 @@ const PICOSAT_UNSATISFIABLE: isize = 20;
 
 const DEFAULT_FILE_MODE: &'static str = "rw";
 
+// We use pointers to this opaque type only.
 enum CPicoSAT {}
 
 pub type PicosatMalloc  = extern fn(*mut c_void, size_t) -> *mut c_void;
@@ -616,4 +617,3 @@ pub fn usedlit(picosat: &mut PicoSAT, lit: i32) -> i32 {
         picosat_usedlit(&mut *picosat.ptr, lit)
     }
 }
-
