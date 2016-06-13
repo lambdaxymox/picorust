@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use libc::{c_char, c_int, c_void, c_double, size_t, c_uint};
 use libc;
 use std::ffi::{CStr, CString};
@@ -12,10 +13,12 @@ const PICOSAT_UNKNOWN: isize       = 0;
 const PICOSAT_SATISFIABLE: isize   = 10;
 const PICOSAT_UNSATISFIABLE: isize = 20;
 
+const DEFAULT_FILE_MODE: &'static str = "rw";
+
 #[repr(C)]
 struct C_PicoSAT {}
 
-extern {
+extern "C" {
     fn picosat_version()   -> *const c_char;
     fn picosat_config()    -> *const c_char;
     fn picosat_copyright() -> *const c_char;
@@ -36,6 +39,20 @@ extern {
     fn picosat_reset_scores(picosat: *mut C_PicoSAT) -> c_void;
     fn picosat_remove_learned(picosat: *mut C_PicoSAT, percentage: c_uint) -> c_void;
 
+    fn picosat_set_more_important_lit(picosat: *mut C_PicoSAT, lit: c_int) -> c_void;
+    fn picosat_set_less_important_lit(picosat: *mut C_PicoSAT, lit: c_int) -> c_void;
+
+    fn picosat_message(picosat: *mut C_PicoSAT, verbosity_level: c_int, fmt: *const c_char, ...) -> c_void;
+
+    fn picosat_set_seed(picosat: *mut C_PicoSAT, random_number_generator_seed: c_uint) -> c_void;
+    fn picosat_enable_trace_generation(picosat: *mut C_PicoSAT) -> c_int;
+
+    fn picosat_set_incremental_rup_file(picosat: *mut C_PicoSAT, file: *const libc::FILE, m: c_int, n: c_int) -> c_void;
+    fn picosat_save_original_clauses(picosat: *mut C_PicoSAT) -> c_void;
+    fn picosat_set_interrupt(picosat: *mut C_PicoSAT, 
+                             external_state: *const c_void,
+                             interrupted: extern fn(external_state: *const c_void) -> c_int) -> c_void;
+
     fn picosat_inc_max_var(picosat: *mut C_PicoSAT) -> c_int;
 
     fn picosat_push(picosat: *mut C_PicoSAT) -> c_int;
@@ -52,6 +69,10 @@ extern {
     fn picosat_time_stamp() -> c_double;
     fn picosat_stats(picosat: *const C_PicoSAT) -> c_void;
     fn picosat_seconds(picosat: *const C_PicoSAT) -> c_double;
+    fn picosat_add(picosat: *mut C_PicoSAT, lit: c_int) -> c_int;
+    fn picosat_add_arg(picosat: *mut C_PicoSAT, ...) -> c_int;
+    fn picosat_add_lits(picosat: *mut C_PicoSAT, lits: *mut c_int) -> c_int;
+    fn picosat_print(picosat: *mut C_PicoSAT, file: *mut libc::FILE) -> c_void;
 } // end C function FFI declarations.
 
 pub fn copyright() -> &'static str {
@@ -105,7 +126,7 @@ pub fn reset(picosat: &mut PicoSAT) {
 pub fn set_output(picosat: &mut PicoSAT, file: &mut File) {
     unsafe {
         let fd = file.as_raw_fd();
-        let c_mode = CString::new("rw").unwrap();
+        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
         let c_mode_ptr = c_mode.as_ptr();
         let c_file = libc::fdopen(fd, c_mode_ptr);
 
@@ -161,6 +182,68 @@ pub fn reset_phases(picosat: &mut PicoSAT) {
 pub fn remove_learned(picosat: &mut PicoSAT, percentage: u32) {
     unsafe {
         picosat_remove_learned(&mut *picosat.ptr, percentage);
+    }
+}
+
+// TODO: make a messages function?
+pub fn message(picosat: &mut PicoSAT, verbosity_level: i32, fmt: &[u8], string: &[u8]) {
+    unsafe {
+        let c_str = CStr::from_bytes_with_nul_unchecked(fmt);
+        let c_fmt = c_str.as_ptr();
+        let new_str = CStr::from_bytes_with_nul_unchecked(string);
+        let new_ptr = new_str.as_ptr();
+
+        picosat_message(&mut *picosat.ptr, verbosity_level, c_fmt, new_ptr);
+    }
+}
+
+pub fn set_more_important_lit(picosat: &mut PicoSAT, lit: i32) {
+    unsafe {
+        picosat_set_more_important_lit(&mut *picosat.ptr, lit);
+    }
+}
+
+pub fn set_less_important_lit(picosat: &mut PicoSAT, lit: i32) {
+    unsafe {
+        picosat_set_less_important_lit(&mut *picosat.ptr, lit);
+    }
+}
+
+pub fn set_seed(picosat: &mut PicoSAT, random_number_generator_seed: u32) {
+    unsafe {
+        picosat_set_seed(&mut *picosat.ptr, random_number_generator_seed);
+    }
+}
+
+pub fn enable_trace_generation(picosat: &mut PicoSAT) -> i32 {
+    unsafe {
+        picosat_enable_trace_generation(&mut *picosat.ptr)
+    }
+}
+
+pub fn set_incremental_rup_file(picosat: &mut PicoSAT, file: &File, m: i32, n: i32) {
+    unsafe {
+        let raw_fd = file.as_raw_fd();
+        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
+        let c_mode_ptr = c_mode.as_ptr();
+        let fd = libc::fdopen(raw_fd, c_mode_ptr);
+
+        picosat_set_incremental_rup_file(&mut *picosat.ptr, &*fd, m, n);
+    }
+}
+
+pub fn save_original_clauses(picosat: &mut PicoSAT) {
+    unsafe {
+        picosat_save_original_clauses(&mut *picosat.ptr);
+    }
+}
+
+pub fn set_interrupt(picosat: &mut PicoSAT, 
+                     external_state: *const c_void,
+                     interrupted: extern fn(external_state: *const c_void) -> i32) 
+{
+    unsafe {
+        picosat_set_interrupt(&mut *picosat.ptr, external_state, interrupted);
     }
 }
 
@@ -239,5 +322,48 @@ pub fn stats(picosat: &PicoSAT) {
 pub fn seconds(picosat: &PicoSAT) -> f64 {
     unsafe {
         picosat_seconds(&*picosat.ptr)
+    }
+}
+
+pub fn add(picosat: &mut PicoSAT, lit: i32) -> i32 {
+    unsafe {
+        picosat_add(&mut *picosat.ptr, lit)
+    }
+}
+
+pub fn add_arg(picosat: &mut PicoSAT, clause: &[i32]) -> i32 {
+    let mut i = 0;
+    loop {
+        if i >= clause.len() {
+            break;
+        }
+
+        let lit = clause[i];
+
+        if lit == 0 {
+            break;
+        }
+
+        add(picosat, lit);
+        i += 1;
+    }
+    // Terminate the clause in picosat.
+    add(picosat, 0)
+}
+
+pub fn add_lits(picosat: &mut PicoSAT, lits: &mut [i32]) -> i32 {
+    unsafe {
+        picosat_add_lits(&mut *picosat.ptr, lits.as_mut_ptr())
+    }
+}
+
+pub fn print(picosat: &mut PicoSAT, file: &mut File) {
+    unsafe {
+        let raw_fd = file.as_raw_fd();
+        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
+        let c_mode_ptr = c_mode.as_ptr();
+        let fd = libc::fdopen(raw_fd, c_mode_ptr);
+
+        picosat_print(&mut *picosat.ptr, fd);
     }
 }
