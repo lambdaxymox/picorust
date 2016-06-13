@@ -8,6 +8,7 @@ use std::os::unix::io::AsRawFd;
 
 
 const PICOSAT_VERSION: isize = 965;
+const PICOSAT_API_VERSION: isize = 953;
 
 const PICOSAT_UNKNOWN: isize       = 0;
 const PICOSAT_SATISFIABLE: isize   = 10;
