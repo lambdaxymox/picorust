@@ -75,6 +75,10 @@ extern "C" {
     fn picosat_print(picosat: *mut C_PicoSAT, file: *mut libc::FILE) -> c_void;
 } // end C function FFI declarations.
 
+type PicosatMalloc  = extern fn(*mut c_void, size_t) -> *mut c_void;
+type PicosatRealloc = extern fn(*mut c_void, *mut c_void, size_t, size_t) -> *mut c_void;
+type PicosatFree    = extern fn(*mut c_void, *mut c_void, size_t) -> c_void;
+
 pub fn copyright() -> &'static str {
     let c_buf: *const c_char = unsafe { picosat_copyright() };
     let c_str: &CStr = unsafe { CStr::from_ptr(c_buf) };
