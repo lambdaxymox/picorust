@@ -16,8 +16,7 @@ const PICOSAT_UNSATISFIABLE: isize = 20;
 
 const DEFAULT_FILE_MODE: &'static str = "rw";
 
-#[repr(C)]
-struct C_PicoSAT {}
+enum CPicoSAT {}
 
 pub type PicosatMalloc  = extern fn(*mut c_void, size_t) -> *mut c_void;
 pub type PicosatRealloc = extern fn(*mut c_void, *mut c_void, size_t, size_t) -> *mut c_void;
@@ -27,90 +26,94 @@ extern "C" {
     fn picosat_version()   -> *const c_char;
     fn picosat_config()    -> *const c_char;
     fn picosat_copyright() -> *const c_char;
-    fn picosat_init()      -> *mut C_PicoSAT;
+    fn picosat_init()      -> *mut CPicoSAT;
     fn picosat_minit(state: *mut c_void, picosat_malloc: PicosatMalloc,
                      picosat_realloc: PicosatRealloc,
-                     picosat_free: PicosatFree) -> *mut C_PicoSAT;
+                     picosat_free: PicosatFree) -> *mut CPicoSAT;
 
-    fn picosat_reset(picosat: *mut C_PicoSAT) -> c_void;
+    fn picosat_reset(picosat: *mut CPicoSAT) -> c_void;
 
-    fn picosat_set_output(picosat: *mut C_PicoSAT, file: *mut libc::FILE) -> c_void;
+    fn picosat_set_output(picosat: *mut CPicoSAT, file: *mut libc::FILE) -> c_void;
 
-    fn picosat_measure_all_calls(picosat: *const C_PicoSAT) -> c_void;
+    fn picosat_measure_all_calls(picosat: *const CPicoSAT) -> c_void;
 
-    fn picosat_set_prefix(picosat: *mut C_PicoSAT, prefix: *const c_char) -> c_void;
-    fn picosat_set_verbosity(picosat: *mut C_PicoSAT, new_verbosity_level: c_int) -> c_void;
-    fn picosat_set_plain(picosat: *mut C_PicoSAT, new_plain_value: c_int) -> c_void;
-    fn picosat_set_global_default_phase(picosat: *mut C_PicoSAT, phase: c_int) -> c_void;
-    fn picosat_set_default_phase_lit(picosat: *mut C_PicoSAT, lit: c_int, phase: c_int) -> c_void;
-    fn picosat_reset_phases(picosat: *mut C_PicoSAT) -> c_void;
-    fn picosat_reset_scores(picosat: *mut C_PicoSAT) -> c_void;
-    fn picosat_remove_learned(picosat: *mut C_PicoSAT, percentage: c_uint) -> c_void;
+    fn picosat_set_prefix(picosat: *mut CPicoSAT, prefix: *const c_char) -> c_void;
+    fn picosat_set_verbosity(picosat: *mut CPicoSAT, new_verbosity_level: c_int) -> c_void;
+    fn picosat_set_plain(picosat: *mut CPicoSAT, new_plain_value: c_int) -> c_void;
+    fn picosat_set_global_default_phase(picosat: *mut CPicoSAT, phase: c_int) -> c_void;
+    fn picosat_set_default_phase_lit(picosat: *mut CPicoSAT, lit: c_int, phase: c_int) -> c_void;
+    fn picosat_reset_phases(picosat: *mut CPicoSAT) -> c_void;
+    fn picosat_reset_scores(picosat: *mut CPicoSAT) -> c_void;
+    fn picosat_remove_learned(picosat: *mut CPicoSAT, percentage: c_uint) -> c_void;
 
-    fn picosat_set_more_important_lit(picosat: *mut C_PicoSAT, lit: c_int) -> c_void;
-    fn picosat_set_less_important_lit(picosat: *mut C_PicoSAT, lit: c_int) -> c_void;
+    fn picosat_set_more_important_lit(picosat: *mut CPicoSAT, lit: c_int) -> c_void;
+    fn picosat_set_less_important_lit(picosat: *mut CPicoSAT, lit: c_int) -> c_void;
 
-    fn picosat_message(picosat: *mut C_PicoSAT, verbosity_level: c_int, fmt: *const c_char, ...) -> c_void;
+    fn picosat_message(picosat: *mut CPicoSAT, verbosity_level: c_int, fmt: *const c_char, ...) -> c_void;
 
-    fn picosat_set_seed(picosat: *mut C_PicoSAT, random_number_generator_seed: c_uint) -> c_void;
-    fn picosat_enable_trace_generation(picosat: *mut C_PicoSAT) -> c_int;
+    fn picosat_set_seed(picosat: *mut CPicoSAT, random_number_generator_seed: c_uint) -> c_void;
+    fn picosat_enable_trace_generation(picosat: *mut CPicoSAT) -> c_int;
 
-    fn picosat_set_incremental_rup_file(picosat: *mut C_PicoSAT, file: *const libc::FILE, m: c_int, n: c_int) -> c_void;
-    fn picosat_save_original_clauses(picosat: *mut C_PicoSAT) -> c_void;
-    fn picosat_set_interrupt(picosat: *mut C_PicoSAT, 
+    fn picosat_set_incremental_rup_file(picosat: *mut CPicoSAT, file: *const libc::FILE, m: c_int, n: c_int) -> c_void;
+    fn picosat_save_original_clauses(picosat: *mut CPicoSAT) -> c_void;
+    fn picosat_set_interrupt(picosat: *mut CPicoSAT, 
                              external_state: *const c_void,
                              interrupted: extern fn(external_state: *const c_void) -> c_int) -> c_void;
 
-    fn picosat_inc_max_var(picosat: *mut C_PicoSAT) -> c_int;
+    fn picosat_inc_max_var(picosat: *mut CPicoSAT) -> c_int;
 
-    fn picosat_push(picosat: *mut C_PicoSAT) -> c_int;
+    fn picosat_push(picosat: *mut CPicoSAT) -> c_int;
 
-    fn picosat_failed_context(picosat: *mut C_PicoSAT, lit: c_int) -> c_int;
-    fn picosat_context(picosat: *const C_PicoSAT) -> c_int;
-    fn picosat_pop(picosat: *mut C_PicoSAT) -> c_int;
-    fn picosat_simplify(picosat: *mut C_PicoSAT) -> c_void;
-    fn picosat_adjust(picosat: *mut C_PicoSAT, max_idx: c_int) -> c_void;
+    fn picosat_failed_context(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
+    fn picosat_context(picosat: *const CPicoSAT) -> c_int;
+    fn picosat_pop(picosat: *mut CPicoSAT) -> c_int;
+    fn picosat_simplify(picosat: *mut CPicoSAT) -> c_void;
+    fn picosat_adjust(picosat: *mut CPicoSAT, max_idx: c_int) -> c_void;
 
-    fn picosat_variables(picosat: *const C_PicoSAT) -> c_int;
-    fn picosat_added_original_clauses(picosat: *const C_PicoSAT) -> c_int;
-    fn picosat_max_bytes_allocated(picosat: *const C_PicoSAT) -> size_t;
+    fn picosat_variables(picosat: *const CPicoSAT) -> c_int;
+    fn picosat_added_original_clauses(picosat: *const CPicoSAT) -> c_int;
+    fn picosat_max_bytes_allocated(picosat: *const CPicoSAT) -> size_t;
     fn picosat_time_stamp() -> c_double;
-    fn picosat_stats(picosat: *const C_PicoSAT) -> c_void;
-    fn picosat_seconds(picosat: *const C_PicoSAT) -> c_double;
-    fn picosat_add(picosat: *mut C_PicoSAT, lit: c_int) -> c_int;
-    fn picosat_add_arg(picosat: *mut C_PicoSAT, ...) -> c_int;
-    fn picosat_add_lits(picosat: *mut C_PicoSAT, lits: *mut c_int) -> c_int;
-    fn picosat_print(picosat: *mut C_PicoSAT, file: *mut libc::FILE) -> c_void;
-    fn picosat_assume(picosat: *mut C_PicoSAT, lit: c_int) -> c_void;
-    fn picosat_add_ado_lit(picosat: *mut C_PicoSAT, lit: c_int) -> c_void;
-    fn picosat_sat(picosat: *mut C_PicoSAT, decision_limit: c_int) -> c_int;
-    fn picosat_set_propagation_limit(picosat: *mut C_PicoSAT, limit: c_ulonglong) -> c_void;
-    fn picosat_res(picosat: *mut C_PicoSAT);
-    fn picosat_deref(picosat: *mut C_PicoSAT, lit: c_int) -> c_int;
-    fn picosat_deref_toplevel(picosat: *mut C_PicoSAT, lit: c_int) -> c_int;
-    fn picosat_deref_partial(picosat: *mut C_PicoSAT, lit: c_int) -> c_int;
-    fn picosat_inconsistent(picosat: *mut C_PicoSAT) -> c_int;
-    fn picosat_failed_assumption(picosat: *mut C_PicoSAT, lit: c_int) -> c_int;
-    fn picosat_failed_assumptions(picosat: *mut C_PicoSAT) -> *const c_int;
-    fn picosat_mus_assumptions(picosat: *mut C_PicoSAT, state: *mut c_void,
+    fn picosat_stats(picosat: *const CPicoSAT) -> c_void;
+    fn picosat_seconds(picosat: *const CPicoSAT) -> c_double;
+    fn picosat_add(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
+    fn picosat_add_arg(picosat: *mut CPicoSAT, ...) -> c_int;
+    fn picosat_add_lits(picosat: *mut CPicoSAT, lits: *mut c_int) -> c_int;
+    fn picosat_print(picosat: *mut CPicoSAT, file: *mut libc::FILE) -> c_void;
+    fn picosat_assume(picosat: *mut CPicoSAT, lit: c_int) -> c_void;
+    fn picosat_add_ado_lit(picosat: *mut CPicoSAT, lit: c_int) -> c_void;
+    fn picosat_sat(picosat: *mut CPicoSAT, decision_limit: c_int) -> c_int;
+    fn picosat_set_propagation_limit(picosat: *mut CPicoSAT, limit: c_ulonglong) -> c_void;
+    fn picosat_res(picosat: *mut CPicoSAT);
+    fn picosat_deref(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
+    fn picosat_deref_toplevel(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
+    fn picosat_deref_partial(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
+    fn picosat_inconsistent(picosat: *mut CPicoSAT) -> c_int;
+    fn picosat_failed_assumption(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
+    fn picosat_failed_assumptions(picosat: *mut CPicoSAT) -> *const c_int;
+    fn picosat_mus_assumptions(picosat: *mut CPicoSAT, state: *mut c_void,
                                cb: extern fn(*mut c_void, *const c_int) -> c_void, 
                                assumptions: c_int) -> *const c_int;
-    fn picosat_maximal_satisfiable_subset_of_assumptions(picosat: *mut C_PicoSAT) -> *const c_int;
-    fn picosat_next_maximal_satisfiable_subset_of_assumptions(picosat: *mut C_PicoSAT) -> *const c_int;
-    fn picosat_next_minimal_correcting_subset_of_assumptions(picosat: *mut C_PicoSAT) -> *const c_int;
+    fn picosat_maximal_satisfiable_subset_of_assumptions(picosat: *mut CPicoSAT) -> *const c_int;
+    fn picosat_next_maximal_satisfiable_subset_of_assumptions(picosat: *mut CPicoSAT) -> *const c_int;
+    fn picosat_next_minimal_correcting_subset_of_assumptions(picosat: *mut CPicoSAT) -> *const c_int;
 
-    fn picosat_changed(picosat: *mut C_PicoSAT) -> c_int;
-    fn picosat_coreclause(picosat: *mut C_PicoSAT, i: c_int) -> c_int;
-    fn picosat_corelit(picosat: *mut C_PicoSAT, lit: c_int) -> c_int;
-    fn picosat_write_clausal_core(picosat: *mut C_PicoSAT, core_file: *mut libc::FILE) -> c_void;
-    fn picosat_write_compact_trace(picosat: *mut C_PicoSAT, trace_file: *mut libc::FILE) -> c_void;
-    fn picosat_write_extended_trace(picosat: *mut C_PicoSAT, trace_file: *mut libc::FILE) -> c_void;
-    fn picosat_write_rup_trace(picosat: *mut C_PicoSAT, trace_file: *mut libc::FILE) -> c_void;
-    fn picosat_usedlit(picosat: *mut C_PicoSAT, lit: c_int) -> c_int;
-    fn picosat_humus(picosat: *mut C_PicoSAT,
+    fn picosat_changed(picosat: *mut CPicoSAT) -> c_int;
+    fn picosat_coreclause(picosat: *mut CPicoSAT, i: c_int) -> c_int;
+    fn picosat_corelit(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
+    fn picosat_write_clausal_core(picosat: *mut CPicoSAT, core_file: *mut libc::FILE) -> c_void;
+    fn picosat_write_compact_trace(picosat: *mut CPicoSAT, trace_file: *mut libc::FILE) -> c_void;
+    fn picosat_write_extended_trace(picosat: *mut CPicoSAT, trace_file: *mut libc::FILE) -> c_void;
+    fn picosat_write_rup_trace(picosat: *mut CPicoSAT, trace_file: *mut libc::FILE) -> c_void;
+    fn picosat_usedlit(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
+    fn picosat_humus(picosat: *mut CPicoSAT,
                      callback: extern fn(state: *mut c_void, nmcs: c_int, nhumus: c_int) -> c_void,
                      state: *mut c_void) -> *const c_int;
 } // end C function FFI declarations.
+
+pub fn version() -> isize {
+    PICOSAT_VERSION
+}
 
 pub fn copyright() -> &'static str {
     let c_buf: *const c_char = unsafe { picosat_copyright() };
@@ -133,11 +136,11 @@ enum Status {
 }
 
 pub struct PicoSAT {
-    ptr: Box<C_PicoSAT>,
+    ptr: Box<CPicoSAT>,
 }
 
 impl PicoSAT {
-    fn new(picosat: *mut C_PicoSAT) -> PicoSAT {
+    fn new(picosat: *mut CPicoSAT) -> PicoSAT {
         let ptr = unsafe { Box::from_raw(picosat) };
 
         PicoSAT {
@@ -547,7 +550,16 @@ pub fn next_minimal_correcting_subset_of_assumptions(picosat: &mut PicoSAT) -> V
     }
 }
 
-// TODO: picosat_humus here
+pub fn humus(picosat: &mut PicoSAT,
+             callback: extern fn(state: *mut c_void, nmcs: i32, nhumus: i32) -> c_void,
+             state: *mut c_void) -> Vec<i32>
+{
+    unsafe {
+        let ptr: *const i32 = picosat_humus(&mut *picosat.ptr, callback, state);
+
+        zero_terminated_list_to_vec(ptr)        
+    }
+}
 
 pub fn changed(picosat: &mut PicoSAT) -> i32 {
     unsafe {
@@ -605,13 +617,3 @@ pub fn usedlit(picosat: &mut PicoSAT, lit: i32) -> i32 {
     }
 }
 
-pub fn humus(picosat: &mut PicoSAT,
-             callback: extern fn(state: *mut c_void, nmcs: i32, nhumus: i32) -> c_void,
-             state: *mut c_void) -> Vec<i32>
-{
-    unsafe {
-        let ptr: *const i32 = picosat_humus(&mut *picosat.ptr, callback, state);
-
-        zero_terminated_list_to_vec(ptr)        
-    }
-}
