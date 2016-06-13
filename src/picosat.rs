@@ -146,6 +146,38 @@ impl PicoSAT {
     }
 }
 
+unsafe fn file_to_libc_file(file: &mut File, mode: &str) -> *mut libc::FILE {
+    let raw_fd = file.as_raw_fd();
+    let cmode = CString::new(mode).unwrap();
+    let cmode_ptr = cmode.as_ptr();
+    let fd = libc::fdopen(raw_fd, cmode_ptr);
+
+    fd
+}   
+
+unsafe fn zero_terminated_list_to_vec(ptr: *const i32) -> Vec<i32> {
+    let mut vec = Vec::new();
+    let mut i = 0;
+
+    if ptr.is_null() {
+        return vec;
+    }
+
+    loop {
+        let pti = (ptr as i32 + i) as *const i32;
+        vec.push(*pti);
+
+        // Terminate at zero.
+        if *pti == 0 {
+            break;
+        }
+
+        i += 1;
+    } 
+
+    vec
+}
+
 pub fn init() -> PicoSAT {
     unsafe {
         let picosat = picosat_init();
@@ -171,12 +203,9 @@ pub fn reset(picosat: &mut PicoSAT) {
 
 pub fn set_output(picosat: &mut PicoSAT, file: &mut File) {
     unsafe {
-        let fd = file.as_raw_fd();
-        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
-        let c_mode_ptr = c_mode.as_ptr();
-        let c_file = libc::fdopen(fd, c_mode_ptr);
+        let fd = file_to_libc_file(file, DEFAULT_FILE_MODE);
 
-        picosat_set_output(&mut *picosat.ptr, c_file);
+        picosat_set_output(&mut *picosat.ptr, fd);
     }
 }
 
@@ -267,12 +296,9 @@ pub fn enable_trace_generation(picosat: &mut PicoSAT) -> i32 {
     }
 }
 
-pub fn set_incremental_rup_file(picosat: &mut PicoSAT, file: &File, m: i32, n: i32) {
+pub fn set_incremental_rup_file(picosat: &mut PicoSAT, file: &mut File, m: i32, n: i32) {
     unsafe {
-        let raw_fd = file.as_raw_fd();
-        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
-        let c_mode_ptr = c_mode.as_ptr();
-        let fd = libc::fdopen(raw_fd, c_mode_ptr);
+        let fd = file_to_libc_file(file, DEFAULT_FILE_MODE);
 
         picosat_set_incremental_rup_file(&mut *picosat.ptr, &*fd, m, n);
     }
@@ -405,10 +431,7 @@ pub fn add_lits(picosat: &mut PicoSAT, lits: &mut [i32]) -> i32 {
 
 pub fn print(picosat: &mut PicoSAT, file: &mut File) {
     unsafe {
-        let raw_fd = file.as_raw_fd();
-        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
-        let c_mode_ptr = c_mode.as_ptr();
-        let fd = libc::fdopen(raw_fd, c_mode_ptr);
+        let fd = file_to_libc_file(file, DEFAULT_FILE_MODE);
 
         picosat_print(&mut *picosat.ptr, fd);
     }
@@ -474,28 +497,7 @@ pub fn failed_assumption(picosat: &mut PicoSAT, lit: i32) -> i32 {
     }
 }
 
-unsafe fn zero_terminated_list_to_vec(ptr: *const i32) -> Vec<i32> {
-    let mut vec = Vec::new();
-    let mut i = 0;
 
-    if ptr.is_null() {
-        return vec;
-    }
-
-    loop {
-        let pti = (ptr as i32 + i) as *const i32;
-        vec.push(*pti);
-
-        // Terminate at zero.
-        if *pti == 0 {
-            break;
-        }
-
-        i += 1;
-    } 
-
-    vec
-}
 
 pub fn failed_assumptions(picosat: &mut PicoSAT) -> Vec<i32> {
     unsafe {
@@ -567,10 +569,7 @@ pub fn corelit(picosat: &mut PicoSAT, lit: i32) -> i32 {
 
 pub fn write_clausal_core(picosat: &mut PicoSAT, core_file: &mut File) {
     unsafe {
-        let raw_fd = core_file.as_raw_fd();
-        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
-        let c_mode_ptr = c_mode.as_ptr();
-        let core_fd = libc::fdopen(raw_fd, c_mode_ptr);
+        let core_fd = file_to_libc_file(core_file, DEFAULT_FILE_MODE);
         
         picosat_write_clausal_core(&mut *picosat.ptr, core_fd);
     }
@@ -578,10 +577,7 @@ pub fn write_clausal_core(picosat: &mut PicoSAT, core_file: &mut File) {
 
 pub fn write_compact_trace(picosat: &mut PicoSAT, trace_file: &mut File) {
     unsafe {
-        let raw_fd = trace_file.as_raw_fd();
-        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
-        let c_mode_ptr = c_mode.as_ptr();
-        let trace_fd = libc::fdopen(raw_fd, c_mode_ptr);
+        let trace_fd = file_to_libc_file(trace_file, DEFAULT_FILE_MODE);
 
         picosat_write_compact_trace(&mut *picosat.ptr, trace_fd);
     }
@@ -589,10 +585,7 @@ pub fn write_compact_trace(picosat: &mut PicoSAT, trace_file: &mut File) {
 
 pub fn write_extended_trace(picosat: &mut PicoSAT, trace_file: &mut File) {
     unsafe {
-        let raw_fd = trace_file.as_raw_fd();
-        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
-        let c_mode_ptr = c_mode.as_ptr();
-        let trace_fd = libc::fdopen(raw_fd, c_mode_ptr);
+        let trace_fd = file_to_libc_file(trace_file, DEFAULT_FILE_MODE);
 
         picosat_write_extended_trace(&mut *picosat.ptr, trace_fd);
     }
@@ -600,10 +593,7 @@ pub fn write_extended_trace(picosat: &mut PicoSAT, trace_file: &mut File) {
 
 pub fn write_rup_trace(picosat: &mut PicoSAT, trace_file: &mut File) {
     unsafe {
-        let raw_fd = trace_file.as_raw_fd();
-        let c_mode = CString::new(DEFAULT_FILE_MODE).unwrap();
-        let c_mode_ptr = c_mode.as_ptr();
-        let trace_fd = libc::fdopen(raw_fd, c_mode_ptr);
+        let trace_fd = file_to_libc_file(trace_file, DEFAULT_FILE_MODE);
 
         picosat_write_rup_trace(&mut *picosat.ptr, trace_fd);
     }
