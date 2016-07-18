@@ -3,11 +3,12 @@ use libc::{c_char, c_int, c_void, c_double, size_t, c_uint, c_ulonglong};
 use libc;
 use std::ffi::{CStr, CString};
 use std::str;
+use std::ptr;
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 
 
-const PICOSAT_VERSION: isize = 965;
+const PICOSAT_VERSION: isize     = 965;
 const PICOSAT_API_VERSION: isize = 953;
 
 const PICOSAT_UNKNOWN: isize       = 0;
@@ -138,6 +139,7 @@ enum Status {
 
 pub struct PicoSAT {
     ptr: Box<CPicoSAT>,
+    _reset: bool,        // Has the PicoSAT instance called reset already?
 }
 
 impl PicoSAT {
@@ -146,7 +148,12 @@ impl PicoSAT {
 
         PicoSAT {
             ptr: ptr,
+            _reset: false,
         }
+    }
+
+    fn reset_called(&self) -> bool {
+        self._reset
     }
 }
 
@@ -223,9 +230,17 @@ pub fn minit(state: &mut State,
     }
 }
 
+// Panics if reset has already been called.
 pub fn reset(picosat: &mut PicoSAT) {
     unsafe {
-        picosat_reset(&mut *picosat.ptr);
+        if !picosat.reset_called() {
+            picosat_reset(&mut *picosat.ptr);
+
+            picosat._reset = true;
+        } else {
+            panic!("Attempt to reset an already reset PicoSAT instance.");
+        }
+
     }
 }
 
@@ -288,7 +303,6 @@ pub fn remove_learned(picosat: &mut PicoSAT, percentage: u32) {
     }
 }
 
-// TODO: make a messages function?
 pub fn message(picosat: &mut PicoSAT, verbosity_level: i32, fmt: &[u8], string: &[u8]) {
     unsafe {
         let c_str = CStr::from_bytes_with_nul_unchecked(fmt);
@@ -641,5 +655,91 @@ pub fn write_rup_trace(picosat: &mut PicoSAT, trace_file: &mut File) {
 pub fn usedlit(picosat: &mut PicoSAT, lit: i32) -> i32 {
     unsafe {
         picosat_usedlit(&mut *picosat.ptr, lit)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use picosat;
+    use std::io::Write;
+    use std::io;
+
+
+    #[test]
+    fn test_picosat_copyright() {
+        let copyright = picosat::copyright();
+
+        writeln!(&mut io::stderr(), "{}\n", copyright).unwrap();
+    }
+
+    #[test]
+    fn test_picosat_init_reset() {
+        let mut picosat = picosat::init();
+
+        picosat::reset(&mut picosat);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_picosat_reset_should_panic_when_called_twice() {
+        let mut picosat = picosat::init();
+
+        picosat::reset(&mut picosat);
+        picosat::reset(&mut picosat);
+    }
+
+    #[test]
+    fn test_picosat_time_stamp() {
+        let time_stamp = picosat::time_stamp();
+
+        writeln!(&mut io::stderr(), "Timestamp: {}\n", time_stamp).unwrap();
+    }
+
+    #[test]
+    fn test_picosat_variables() {
+        let mut picosat = picosat::init();
+        let variables = picosat::variables(&picosat);
+
+        writeln!(&mut io::stderr(), "variables: {:b}\n", variables).unwrap();
+
+        picosat::reset(&mut picosat);
+    }
+
+    #[test]
+    fn test_picosat_added_original_clauses() {
+        let mut picosat = picosat::init();
+        let clauses = picosat::added_original_clauses(&picosat);
+
+        writeln!(&mut io::stderr(), "clauses: {}\n", clauses).unwrap();
+
+        picosat::reset(&mut picosat);
+    }
+
+    #[test]
+    fn test_picosat_max_bytes_allocated() {
+        let mut picosat = picosat::init();
+        let bytes = picosat::max_bytes_allocated(&picosat);
+
+        writeln!(&mut io::stderr(), "bytes allocated: {}\n", bytes).unwrap();
+
+        picosat::reset(&mut picosat);
+    }
+
+    #[test]
+    fn test_picosat_seconds() {
+        let mut picosat = picosat::init();
+        let seconds = picosat::seconds(&picosat);
+    
+        picosat::reset(&mut picosat);
+
+        writeln!(&mut io::stderr(), "seconds: {}\n", seconds).unwrap();
+    }
+
+    #[test]
+    fn test_picosat_stats() {
+        let mut picosat = picosat::init();
+        picosat::stats(&picosat);
+        picosat::reset(&mut picosat);
     }
 }
