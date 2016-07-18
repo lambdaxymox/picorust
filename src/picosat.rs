@@ -3,7 +3,6 @@ use libc::{c_char, c_int, c_void, c_double, size_t, c_uint, c_ulonglong};
 use libc;
 use std::ffi::{CStr, CString};
 use std::str;
-use std::ptr;
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 
@@ -87,7 +86,7 @@ extern "C" {
     fn picosat_add_ado_lit(picosat: *mut CPicoSAT, lit: c_int) -> c_void;
     fn picosat_sat(picosat: *mut CPicoSAT, decision_limit: c_int) -> c_int;
     fn picosat_set_propagation_limit(picosat: *mut CPicoSAT, limit: c_ulonglong) -> c_void;
-    fn picosat_res(picosat: *mut CPicoSAT);
+    fn picosat_res(picosat: *mut CPicoSAT) -> c_int;
     fn picosat_deref(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
     fn picosat_deref_toplevel(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
     fn picosat_deref_partial(picosat: *mut CPicoSAT, lit: c_int) -> c_int;
@@ -393,7 +392,7 @@ pub fn pop(picosat: &mut PicoSAT) -> i32 {
     }
 }
 
-pub fn simplify (picosat: &mut PicoSAT) {
+pub fn simplify(picosat: &mut PicoSAT) {
     unsafe {
         picosat_simplify(&mut *picosat.ptr);
     }
@@ -493,8 +492,12 @@ pub fn add_ado_lit(picosat: &mut PicoSAT, lit: i32) {
     }
 }
 
+/// The function `sat` is the main SAT solving function in PicoSAT. 
+/// A negative value for `decision_limit` sets no limit on
+/// the number of decisions made.  
+///
 pub fn sat(picosat: &mut PicoSAT, decision_limit: i32) -> i32 {
-    unsafe {
+    unsafe { 
         picosat_sat(&mut *picosat.ptr, decision_limit)
     }
 }
@@ -505,9 +508,9 @@ pub fn set_propagation_limit(picosat: &mut PicoSAT, limit: u64) {
     }
 }
 
-pub fn res(picosat: &mut PicoSAT) {
+pub fn res(picosat: &mut PicoSAT) -> i32 {
     unsafe {
-        picosat_res(&mut *picosat.ptr);
+        picosat_res(&mut *picosat.ptr)
     }
 }
 
@@ -741,5 +744,47 @@ mod tests {
         let mut picosat = picosat::init();
         picosat::stats(&picosat);
         picosat::reset(&mut picosat);
+    }
+
+    // Example 1 from the PicoSAT talk slides at
+    // http://fmv.jku.at/biere/talks/Biere-TPTPA11.pdf
+    #[test]
+    fn test_picosat_sat_solver_unsatisfiable() {
+        let mut psat = picosat::init();
+
+        picosat::add(&mut psat, -2); picosat::add(&mut psat, 0);
+        picosat::add(&mut psat, -1); picosat::add(&mut psat, -3); picosat::add(&mut psat, 0);
+        picosat::add(&mut psat, 1);  picosat::add(&mut psat, 2);  picosat::add(&mut psat, 0);
+        picosat::add(&mut psat, 2);  picosat::add(&mut psat, 3);  picosat::add(&mut psat, 0);
+
+        let result = picosat::sat(&mut psat, -1);
+
+        picosat::reset(&mut psat);
+
+        assert_eq!(result as isize, picosat::PICOSAT_UNSATISFIABLE);
+    }
+
+    // Example 2 from PicoSAT talk slides at
+    // http://fmv.jku.at/biere/talks/Biere-TPTPA11.pdf
+    #[test]
+    fn test_picosat_solver_satisfiable() {
+        let mut psat = picosat::init();
+
+        picosat::add(&mut psat, 1);  picosat::add(&mut psat, 2); picosat::add(&mut psat, 0);
+        picosat::add(&mut psat, -1); picosat::add(&mut psat, 2); picosat::add(&mut psat, 0);
+        picosat::add(&mut psat, -2); picosat::add(&mut psat, 1); picosat::add(&mut psat, 0);
+
+        let result = picosat::sat(&mut psat, -1);
+
+        assert_eq!(result, picosat::res(&mut psat));
+        assert_eq!(result as isize, picosat::PICOSAT_SATISFIABLE);
+
+        let v1 = picosat::deref(&mut psat, 1);
+        let v2 = picosat::deref(&mut psat, 2);
+
+        picosat::reset(&mut psat);
+
+        assert_eq!(v1, 1);
+        assert_eq!(v2, 1);
     }
 }

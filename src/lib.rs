@@ -1,3 +1,3 @@
 extern crate libc;
 
-mod picosat;
+pub mod picosat;
