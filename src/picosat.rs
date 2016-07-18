@@ -16,7 +16,7 @@ const PICOSAT_UNSATISFIABLE: isize = 20;
 
 const DEFAULT_FILE_MODE: &'static str = "rw";
 
-// We use pointers to this opaque types only.
+// We use pointers to this opaque type only.
 enum CPicoSAT {}
 
 pub type PicosatMalloc  = extern fn(*mut c_void, size_t) -> *mut c_void;
@@ -125,7 +125,6 @@ pub fn copyright() -> &'static str {
     str::from_utf8(buf).unwrap()
 }
 
-/// 
 /// We cannot access C preprocessor definitions from Rust FFI.
 /// See the stackoverflow thread
 /// https://stackoverflow.com/questions/21485655/how-do-i-use-c-preprocessor-macros-with-rusts-ffi
