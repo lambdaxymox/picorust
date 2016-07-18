@@ -16,7 +16,7 @@ const PICOSAT_UNSATISFIABLE: isize = 20;
 
 const DEFAULT_FILE_MODE: &'static str = "rw";
 
-// We use pointers to this opaque type only.
+// We use pointers to this opaque types only.
 enum CPicoSAT {}
 
 pub type PicosatMalloc  = extern fn(*mut c_void, size_t) -> *mut c_void;
@@ -28,7 +28,8 @@ extern "C" {
     fn picosat_config()    -> *const c_char;
     fn picosat_copyright() -> *const c_char;
     fn picosat_init()      -> *mut CPicoSAT;
-    fn picosat_minit(state: *mut c_void, picosat_malloc: PicosatMalloc,
+    fn picosat_minit(state: *mut c_void, 
+                     picosat_malloc: PicosatMalloc,
                      picosat_realloc: PicosatRealloc,
                      picosat_free: PicosatFree) -> *mut CPicoSAT;
 
@@ -120,9 +121,8 @@ pub fn copyright() -> &'static str {
     let c_buf: *const c_char = unsafe { picosat_copyright() };
     let c_str: &CStr = unsafe { CStr::from_ptr(c_buf) };
     let buf: &[u8] = c_str.to_bytes();
-    let str_slice: &str = str::from_utf8(buf).unwrap();
-
-    str_slice
+    
+    str::from_utf8(buf).unwrap()
 }
 
 /// 
@@ -145,6 +145,27 @@ impl PicoSAT {
         let ptr = unsafe { Box::from_raw(picosat) };
 
         PicoSAT {
+            ptr: ptr,
+        }
+    }
+}
+
+// Wrapper for state variables in picosat interface.
+pub struct State {
+    ptr: Box<c_void>,
+}
+
+impl State {
+    fn new(state: *const c_void) -> State {
+        let mut_ptr: *mut c_void = state as *mut c_void;
+
+        State::new_mut(mut_ptr)
+    }
+
+    fn new_mut(state: *mut c_void) -> State {
+        let ptr = unsafe { Box::from_raw(state) };
+
+        State {
             ptr: ptr,
         }
     }
@@ -190,12 +211,15 @@ pub fn init() -> PicoSAT {
     }
 }
 
-pub fn minit(state: *mut c_void, picosat_malloc: PicosatMalloc,
-                     picosat_realloc: PicosatRealloc,
-                     picosat_free: PicosatFree) -> PicoSAT 
+pub fn minit(state: &mut State, 
+             picosat_malloc: PicosatMalloc,
+             picosat_realloc: PicosatRealloc,
+             picosat_free: PicosatFree) -> PicoSAT 
 {
     unsafe {
-        PicoSAT::new(picosat_minit(state, picosat_malloc, picosat_realloc, picosat_free))
+        let raw_state: *mut c_void = &mut *state.ptr;
+
+        PicoSAT::new(picosat_minit(raw_state, picosat_malloc, picosat_realloc, picosat_free))
     }
 }
 
@@ -315,11 +339,13 @@ pub fn save_original_clauses(picosat: &mut PicoSAT) {
 }
 
 pub fn set_interrupt(picosat: &mut PicoSAT, 
-                     external_state: *const c_void,
+                     external_state: &State,
                      interrupted: extern fn(external_state: *const c_void) -> i32) 
 {
     unsafe {
-        picosat_set_interrupt(&mut *picosat.ptr, external_state, interrupted);
+        let raw_external_state: *const c_void = &*external_state.ptr;
+
+        picosat_set_interrupt(&mut *picosat.ptr, raw_external_state, interrupted);
     }
 }
 
@@ -501,8 +527,6 @@ pub fn failed_assumption(picosat: &mut PicoSAT, lit: i32) -> i32 {
     }
 }
 
-
-
 pub fn failed_assumptions(picosat: &mut PicoSAT) -> Vec<i32> {
     unsafe {
         let failed_assumptions: *const i32 = 
@@ -512,13 +536,14 @@ pub fn failed_assumptions(picosat: &mut PicoSAT) -> Vec<i32> {
     }
 }
 
-pub fn mus_assumptions(picosat: &mut PicoSAT, state: *mut c_void,
+pub fn mus_assumptions(picosat: &mut PicoSAT, state: &mut State,
                        cb: extern fn(*mut c_void, *const c_int) -> c_void, 
                        assumptions: i32) -> Vec<i32> 
 {
     unsafe {
+        let raw_state: *mut c_void = &mut *state.ptr;
         let failed_assumptions: *const i32 = 
-                picosat_mus_assumptions(&mut *picosat.ptr, state, cb, assumptions);
+                picosat_mus_assumptions(&mut *picosat.ptr, raw_state, cb, assumptions);
 
         zero_terminated_list_to_vec(failed_assumptions)                      
     }
@@ -553,10 +578,11 @@ pub fn next_minimal_correcting_subset_of_assumptions(picosat: &mut PicoSAT) -> V
 
 pub fn humus(picosat: &mut PicoSAT,
              callback: extern fn(state: *mut c_void, nmcs: i32, nhumus: i32) -> c_void,
-             state: *mut c_void) -> Vec<i32>
+             state: &mut State) -> Vec<i32>
 {
     unsafe {
-        let ptr: *const i32 = picosat_humus(&mut *picosat.ptr, callback, state);
+        let raw_state: *mut c_void = &mut *state.ptr;
+        let ptr: *const i32 = picosat_humus(&mut *picosat.ptr, callback, raw_state);
 
         zero_terminated_list_to_vec(ptr)        
     }
@@ -568,7 +594,7 @@ pub fn changed(picosat: &mut PicoSAT) -> i32 {
     }
 }
 
-pub fn coreclause(picosat: &mut PicoSAT, i: c_int) -> i32 {
+pub fn coreclause(picosat: &mut PicoSAT, i: i32) -> i32 {
     unsafe {
         picosat_coreclause(&mut *picosat.ptr, i)
     }
